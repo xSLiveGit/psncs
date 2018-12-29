@@ -601,7 +601,7 @@ BOOLEAN CmdHandleEncryptMessage(
     volatile BOOLEAN allGood = FALSE;
     PENCRYPTION_STRUCT workerParam = NULL;
     volatile LONGLONG counter = 0;
-    int noThreads = 10;
+    int noThreads = 4;
     int i = 0;
     DWORD fileSize = 0;
     DWORD remainingFileTooEncryptSize = 0;
