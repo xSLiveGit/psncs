@@ -14,11 +14,13 @@
 typedef struct _ENCRYPTION_STRUCT
 {
     DWORD               ThreadId;
-    HANDLE              FileHandle;
     DWORD               BytesToEncrypt;
+    CHAR*               FileName;
+    DWORD               FileOffset;
     LONGLONG volatile * SharedCounter;
     volatile BOOLEAN*   ShouldNotExit;
     CHAR                EncryptionByte;
+    INT                 UserId;
 } ENCRYPTION_STRUCT, *PENCRYPTION_STRUCT;
 
 BOOLEAN 

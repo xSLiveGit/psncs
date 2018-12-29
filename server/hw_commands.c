@@ -49,18 +49,19 @@ static BOOLEAN _CmdMsgNameIsValid(char* Msg)
 }
 
 static HANDLE _OpenFile(
-    CHAR*   Parameter, 
+    CHAR*   Parameter,
     BOOLEAN IsNewFile,
     BOOLEAN RequestWriteRights,
     BOOLEAN IsEnryptMode,
     char *  Output,
-    int *   OutLength, 
+    int *   OutLength,
     int     UserId
 )
 {
     char filePath[PATH_MAX_LENGTH] = { 0 };
     int retCode = 0;
     HANDLE msgFileHandle = INVALID_HANDLE_VALUE;
+    SECURITY_ATTRIBUTES attr = { 0 };
 
     __try
     {
@@ -83,11 +84,17 @@ static HANDLE _OpenFile(
             __leave;
         }
 
+        if (IsEnryptMode)
+        {
+            attr.bInheritHandle = TRUE;
+            attr.nLength = sizeof(attr);
+        }
+
         msgFileHandle = CreateFileA(
             filePath,
-            RequestWriteRights ? GENERIC_WRITE : GENERIC_READ,
+            RequestWriteRights ? GENERIC_WRITE | GENERIC_READ : GENERIC_READ,
             IsEnryptMode ? FILE_SHARE_WRITE | FILE_SHARE_READ : 0,
-            NULL,
+            IsEnryptMode ? &attr : NULL,
             IsNewFile ? CREATE_NEW : OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
             NULL
@@ -433,43 +440,41 @@ BOOLEAN CmdHandleWriteMessage(
 static void _InitEncryptionStruct(PENCRYPTION_STRUCT EncryptionStruct)
 {
     EncryptionStruct->BytesToEncrypt = 0;
-    EncryptionStruct->FileHandle = INVALID_HANDLE_VALUE;
+    EncryptionStruct->FileOffset = 0;
+    EncryptionStruct->FileName = NULL;
     EncryptionStruct->SharedCounter = NULL;
     EncryptionStruct->ThreadId = (DWORD)-1;
     EncryptionStruct->ShouldNotExit = NULL;
     EncryptionStruct->EncryptionByte = 0;
+    EncryptionStruct->UserId = (DWORD)-1;
 }
 
 static BOOLEAN _FillEncryptionStruct(
-    PENCRYPTION_STRUCT EncryptionStruct, 
-    char * Parameter, 
-    char * Output, 
-    int * OutLength,
-    volatile LONGLONG  * Counter,
-    DWORD BytesToEncrypt,
-    DWORD ThreadId,
-    int UserId,
-    volatile BOOLEAN* ShouldNotExit
+    PENCRYPTION_STRUCT      EncryptionStruct, 
+    char *                  Parameter, 
+    volatile LONGLONG  *    Counter,
+    DWORD                   BytesToEncrypt,
+    DWORD                   ThreadId,
+    int                     UserId,
+    volatile BOOLEAN*       ShouldNotExit,
+    DWORD                   FileOffset
     )
 {
-    EncryptionStruct->FileHandle = _OpenFile(Parameter, FALSE, TRUE, TRUE, Output, OutLength, UserId);
-    if (INVALID_HANDLE_VALUE == EncryptionStruct->FileHandle)
-    {
-        return FALSE;
-    }
 
+    EncryptionStruct->FileName = Parameter;
+    EncryptionStruct->FileOffset = FileOffset;
     EncryptionStruct->BytesToEncrypt = BytesToEncrypt;
     EncryptionStruct->SharedCounter = Counter;
     EncryptionStruct->ThreadId = ThreadId;
     EncryptionStruct->ShouldNotExit = ShouldNotExit;
     EncryptionStruct->EncryptionByte = (BYTE)UserId+1;
+    EncryptionStruct->UserId = UserId;
 
     return TRUE;
 }
 
 static void _CleanUpEncryptionStruct(PENCRYPTION_STRUCT EncryptionStruct)
 {
-    CloseHandle(EncryptionStruct->FileHandle);
     _InitEncryptionStruct(EncryptionStruct);
 }
 
@@ -503,11 +508,32 @@ WINAPI EncryptionThread(
     CHAR encryptionBuffer[64] = { 0 };
     DWORD readBytes = 0;
     DWORD currentEncryptionBytes = 0;
+    CHAR message[4096] = { 0 };
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    int messageLenght = 0;
 
     __try
     {
-        if (! encryptionStruct->ShouldNotExit)
+        if (!encryptionStruct->ShouldNotExit)
         {
+            __leave;
+        }
+
+        //
+        // Open file to encrypt
+        //
+        fileHandle = _OpenFile(encryptionStruct->FileName, FALSE, TRUE, TRUE, message, &messageLenght, encryptionStruct->UserId);
+        if (INVALID_HANDLE_VALUE == fileHandle)
+        {
+            __leave;
+        }
+
+        //
+        // Adjust file pointer
+        //
+        if (INVALID_SET_FILE_POINTER == SetFilePointer(fileHandle, encryptionStruct->FileOffset, NULL, FILE_BEGIN))
+        {
+            Log("SetFilePointer returned INVALID_SET_FILE_POINTER");
             __leave;
         }
 
@@ -518,7 +544,7 @@ WINAPI EncryptionThread(
             //
             // Read max 64 bytes
             //
-            if (!ReadFile(encryptionStruct->FileHandle, encryptionBuffer, currentEncryptionBytes, &readBytes, NULL))
+            if (!ReadFile(fileHandle, encryptionBuffer, currentEncryptionBytes, &readBytes, NULL))
             {
                 Log("Read file failed during encryption with status: 0x%08X", GetLastError());
                 __leave;
@@ -527,7 +553,7 @@ WINAPI EncryptionThread(
             //
             // Move cursor back
             //
-            if (INVALID_SET_FILE_POINTER == SetFilePointer(encryptionStruct->FileHandle, currentEncryptionBytes, NULL, FILE_CURRENT))
+            if (INVALID_SET_FILE_POINTER == SetFilePointer(fileHandle, -currentEncryptionBytes, NULL, FILE_CURRENT))
             {
                 Log("SetFilePointer returned INVALID_SET_FILE_POINTER");
                 __leave;
@@ -541,9 +567,9 @@ WINAPI EncryptionThread(
             //
             // Write message => it will move file cursor
             //
-            if (!WriteFile(encryptionStruct->FileHandle, encryptionBuffer, readBytes, NULL, NULL))
+            if (!WriteFile(fileHandle, encryptionBuffer, readBytes, NULL, NULL))
             {
-                Log("WriteFile failed during ecnryption gle: 0x%08X", GetLastError());
+                Log("WriteFile failed during encryption gle: 0x%08X", GetLastError());
                 __leave;
             }
 
@@ -553,6 +579,11 @@ WINAPI EncryptionThread(
     __finally
     {
         _FreeEncryptionStruct(&encryptionStruct);
+        if (INVALID_HANDLE_VALUE != fileHandle)
+        {
+            CloseHandle(fileHandle);
+            fileHandle = INVALID_HANDLE_VALUE;
+        }
     }
 
     return 0;
@@ -566,13 +597,14 @@ BOOLEAN CmdHandleEncryptMessage(
 )
 {
     HANDLE msgFileHandle = INVALID_HANDLE_VALUE;
-    HANDLE hThreads[2] = { NULL };
+    HANDLE* hThreads = NULL ;
     volatile BOOLEAN allGood = FALSE;
     PENCRYPTION_STRUCT workerParam = NULL;
     volatile LONGLONG counter = 0;
-    int noThreads = 2;
+    int noThreads = 10;
     int i = 0;
     DWORD fileSize = 0;
+    DWORD remainingFileTooEncryptSize = 0;
     DWORD bytesToEncryptForCurrentWorker = 0;
     DWORD fileOffset = 0;
     SECURITY_ATTRIBUTES securityAttributes = { 0 };
@@ -587,6 +619,13 @@ BOOLEAN CmdHandleEncryptMessage(
 
     __try
     {
+        hThreads = (HANDLE*)malloc(noThreads * sizeof(HANDLE));
+        if (NULL == hThreads)
+        {
+            Log("malloc failed for %d threads.", noThreads);
+            __leave;
+        }
+
         msgFileHandle = _OpenFile(Parameter, FALSE, TRUE, TRUE, Output, OutLength, *UserId);
         if (INVALID_HANDLE_VALUE == msgFileHandle)
         {
@@ -599,6 +638,7 @@ BOOLEAN CmdHandleEncryptMessage(
             Log("GetFileSize failed with gle: 0x%08X", GetLastError());
             __leave;
         }
+        remainingFileTooEncryptSize = fileSize;
 
         CloseHandle(msgFileHandle);
         msgFileHandle = INVALID_HANDLE_VALUE;
@@ -615,19 +655,18 @@ BOOLEAN CmdHandleEncryptMessage(
                 __leave;
             }
 
-            bytesToEncryptForCurrentWorker = fileSize / (noThreads - i);
+            bytesToEncryptForCurrentWorker = remainingFileTooEncryptSize / (noThreads - i);
 
             _InitEncryptionStruct(workerParam);
             if (!_FillEncryptionStruct(
                 workerParam, 
                 Parameter, 
-                Output, 
-                OutLength, 
                 &counter, 
                 bytesToEncryptForCurrentWorker, 
                 i, 
                 *UserId, 
-                &allGood
+                &allGood,
+                fileOffset
             ))
             {
                 __leave;
@@ -636,9 +675,9 @@ BOOLEAN CmdHandleEncryptMessage(
             //
             //Set right handle offset
             //
-            SetFilePointer(workerParam->FileHandle, fileOffset, NULL, FILE_BEGIN);
             fileOffset += bytesToEncryptForCurrentWorker;
-            
+            remainingFileTooEncryptSize -= bytesToEncryptForCurrentWorker;
+
             //
             // Create thread
             // 
@@ -682,15 +721,21 @@ BOOLEAN CmdHandleEncryptMessage(
             }
         }
 
-        //
-        // Wait for all threads
-        //
-        for (i = 0; i < noThreads; i++)
+        if (NULL != hThreads)
         {
-            if (WAIT_FAILED == WaitForSingleObject(hThreads[i], INFINITE))//ignore other statuses..
+            //
+            // Wait for all threads
+            //
+            for (i = 0; i < noThreads; i++)
             {
-                Log("WaitForSingleObject failed with 0x%08X", GetLastError());
+                if (WAIT_FAILED == WaitForSingleObject(hThreads[i], INFINITE))//ignore other statuses..
+                {
+                    Log("WaitForSingleObject failed with 0x%08X", GetLastError());
+                }
             }
+
+            free(hThreads);
+            hThreads = NULL;
         }
     }
 
