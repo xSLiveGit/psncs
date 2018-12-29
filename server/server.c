@@ -260,6 +260,7 @@ BOOLEAN InterpretCommand(
             return TRUE;
         }
 
+        // Command = 'CREATEMSG', Parameter = message (file name)
         if (0 == _stricmp(Command, CMD_CREATE_MSG))
         {
             if (NULL == Parameter)
@@ -271,12 +272,12 @@ BOOLEAN InterpretCommand(
             if (!CmdHandleCreateMsg(Parameter, Output, OutLength, UserId))
             {
                 SetReply(Output, OutLength, "[ERROR] Internal error.");
-                return TRUE;
             }
 
             return TRUE;
         }
 
+        // Command = 'WRITEMSG', Parameter = message content
         if (0 == _stricmp(Command, CMD_WRITE_MSG))
         {
             if (NULL == Parameter)
@@ -288,7 +289,23 @@ BOOLEAN InterpretCommand(
             if (!CmdHandleWriteMessage(Parameter, ParameterLength, Output, OutLength, UserId))
             {
                 SetReply(Output, OutLength, "[ERROR] Internal error.");
+            }
+
+            return TRUE;
+        }
+
+        // Command = 'ENCRYPTMSG', Parameter = message (file name)
+        if (0 == _stricmp(Command, CMD_ENCRYPT_MSG))
+        {
+            if (NULL == Parameter)
+            {
+                SetReply(Output, OutLength, "[ERROR] Invalid parameter.");
                 return TRUE;
+            }
+
+            if (!CmdHandleEncryptMessage(Parameter, Output, OutLength, UserId))
+            {
+                SetReply(Output, OutLength, "[ERROR] Internal error.");
             }
 
             return TRUE;

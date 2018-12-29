@@ -11,6 +11,16 @@
 #define CONTROL_DIRECTORY_NAME_SIZE sizeof("_control")
 #define CONTROL_FILE_SUFIX_SIZE sizeof(CONTROL_FILE_SUFIX)
 
+typedef struct _ENCRYPTION_STRUCT
+{
+    DWORD               ThreadId;
+    HANDLE              FileHandle;
+    DWORD               BytesToEncrypt;
+    LONGLONG volatile * SharedCounter;
+    volatile BOOLEAN*   ShouldNotExit;
+    CHAR                EncryptionByte;
+} ENCRYPTION_STRUCT, *PENCRYPTION_STRUCT;
+
 BOOLEAN 
 CmdHandleCreateMsg(
     _In_    char    *Parameter,
@@ -23,6 +33,14 @@ BOOLEAN
 CmdHandleWriteMessage(
     _In_    char    *Parameter,
     _In_    DWORD   ParameterSize,
+    _Out_   char    *Output,
+    _Out_   int     *OutLength,
+    _In_    int*    UserId
+);
+
+BOOLEAN
+CmdHandleEncryptMessage(
+    _In_    char    *Parameter,
     _Out_   char    *Output,
     _Out_   int     *OutLength,
     _In_    int*    UserId
