@@ -13,6 +13,7 @@
 #include "commands.h"
 #include "data.h"
 #include "server.h"
+#include "hw_commands.h"
 
 #define DEFAULT_PORT    "27015"
 
@@ -36,6 +37,9 @@ typedef enum {
 #define CMD_GET         "get"
 #define CMD_AVAIL       "avail"
 #define CMD_INFO        "info"
+#define CMD_CREATE_MSG  "createmsg"
+#define CMD_WRITE_MSG   "writemsg"
+#define CMD_ENCRYPT_MSG "encryptmsg"
 
 
 void SetReply(
@@ -254,6 +258,23 @@ BOOLEAN InterpretCommand(
 
             return TRUE;
         }
+
+        if (0 == _stricmp(Command, CMD_CREATE_MSG))
+        {
+            if (NULL == Parameter)
+            {
+                SetReply(Output, OutLength, "[ERROR] Invalid parameter.");
+                return TRUE;
+            }
+
+            if (!CmdHandleCreateMsg(Parameter, Output, OutLength, UserId))
+            {
+                SetReply(Output, OutLength, "[ERROR] Internal error.");
+                return TRUE;
+            }
+
+            return TRUE;
+        }
     }
 
     if (0 == _stricmp(Command, CMD_AVAIL))
@@ -267,7 +288,7 @@ BOOLEAN InterpretCommand(
             SetReply(Output, OutLength, "[OK] Available commands: pass, user, exit");
             break;
         case CONN_AUTHENTICATED:
-            SetReply(Output, OutLength, "[OK] Available commands: info, logoff, list, get");
+            SetReply(Output, OutLength, "[OK] Available commands: info, logoff, list, get, %s, %s, %s", CMD_CREATE_MSG, CMD_WRITE_MSG, CMD_ENCRYPT_MSG);
             break;
         }
         return TRUE;
