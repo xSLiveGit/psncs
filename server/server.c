@@ -86,6 +86,7 @@ Log(
 BOOLEAN InterpretCommand(
     char *Command,
     char *Parameter,
+    DWORD ParameterLength,
     char *Output,
     int *OutLength,
     CONNECTION_STATE *State,
@@ -275,6 +276,23 @@ BOOLEAN InterpretCommand(
 
             return TRUE;
         }
+
+        if (0 == _stricmp(Command, CMD_WRITE_MSG))
+        {
+            if (NULL == Parameter)
+            {
+                SetReply(Output, OutLength, "[ERROR] Invalid parameter.");
+                return TRUE;
+            }
+
+            if (!CmdHandleWriteMessage(Parameter, ParameterLength, Output, OutLength, UserId))
+            {
+                SetReply(Output, OutLength, "[ERROR] Internal error.");
+                return TRUE;
+            }
+
+            return TRUE;
+        }
     }
 
     if (0 == _stricmp(Command, CMD_AVAIL))
@@ -288,7 +306,7 @@ BOOLEAN InterpretCommand(
             SetReply(Output, OutLength, "[OK] Available commands: pass, user, exit");
             break;
         case CONN_AUTHENTICATED:
-            SetReply(Output, OutLength, "[OK] Available commands: info, logoff, list, get, %s, %s, %s", CMD_CREATE_MSG, CMD_WRITE_MSG, CMD_ENCRYPT_MSG);
+            SetReply(Output, OutLength, "[OK] Available commands: info, logoff, list, get, createmsg, writemsg, encryptmsg");
             break;
         }
         return TRUE;
@@ -323,7 +341,7 @@ ProcessCommand(
     {
         // Comanda fara parametri
         Input[i] = 0;
-        return InterpretCommand(Input, NULL, Output, OutLength, State, UserId);
+        return InterpretCommand(Input, NULL, 0, Output, OutLength, State, UserId);
     }
 
     Input[i] = 0;
@@ -336,7 +354,7 @@ ProcessCommand(
     if (i == InLength)
     {
         // Only spaces, no parameter
-        return InterpretCommand(Input, "", Output, OutLength, State, UserId);
+        return InterpretCommand(Input, "", 0, Output, OutLength, State, UserId);
     }
 
     paramIndex = i;
@@ -344,7 +362,7 @@ ProcessCommand(
 
     //printf("[%s] [%s] %d\n", Input, &Input[paramIndex], paramIndex);
 
-    return InterpretCommand(Input, &Input[paramIndex], Output, OutLength, State, UserId);
+    return InterpretCommand(Input, &Input[paramIndex], InLength - paramIndex, Output, OutLength, State, UserId);
 }
 
 
