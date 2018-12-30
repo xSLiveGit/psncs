@@ -1,0 +1,1 @@
+xcopy /s c:\facultate\PSNCS\ClientServerHW\SimpleWebPage c:\xampp\htdocs /Y
