@@ -12,6 +12,14 @@
 </head>
 <body>
 
+<form id="add_comment_form" action="add_comment.php " method='post'>
+  <div class="container">
+    <label for="cmt"><b>Comment: </b></label>
+    <input type="text" placeholder="Enter new comment" name="comment" required maxlength="30">
+    <button type="submit">Add</button>
+  </div>
+</form>
+
 <div id="comments"></div>
 
 <script type="text/javascript">

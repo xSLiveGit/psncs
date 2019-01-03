@@ -41,7 +41,7 @@ if (!empty( $_POST ))
                 echo 'given usertype: ' . $_POST['type'] . ' db usertype: ' . $user['type'];
             	if ((($user['type'] == 'admin') || ($_POST['type'] == 'normal'))) 
                 {
-            		$_SESSION['username'] = $user['username'];
+            		$_SESSION['username'] = $_POST['username'];
                     $_SESSION['type'] = $_POST['type'];
                     echo 'ar trebui sa fie login';
                     header("Location: /page2.html");
