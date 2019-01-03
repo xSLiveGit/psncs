@@ -1,12 +1,29 @@
 <html>
 <head>
+	<style>
+	table, th, td {
+  	border: 1px solid black;
+	}
+	</style>
+	<script src="jquery-3.3.1.js"></script>
 	<title>
 		Tema psncs - Maries Sergiu
 	</title>
 </head>
 <body>
 
-<p> Te-ai logat cu success in pagina 2.
+<div id="comments"></div>
+
+<script type="text/javascript">
+	window.onload = function(){ 
+    $.get("load_comments.php", { }, function(data, status){
+            $("#comments").html(data); 
+            console.log(data);
+        }
+    );
+}; 
+
+</script>
 
 </body> 
 </html>
