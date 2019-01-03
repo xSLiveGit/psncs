@@ -44,7 +44,7 @@ if (!empty( $_POST ))
             		$_SESSION['username'] = $_POST['username'];
                     $_SESSION['type'] = $_POST['type'];
                     echo 'ar trebui sa fie login';
-                    header("Location: /page2.html");
+                    header("Location: /page2.php");
             	}
                 else
                 {
