@@ -2,12 +2,12 @@ import sqlite3
 import md5
 import os
 
-DB_PATH =r"c:\facultate\PSNCS\ClientServerHW\SimpleWebPage\db.db"
+DB_PATH =r"c:\facultate\PSNCS\ClientServerHW\SimpleWebPage\db.sqllite"
 
 def connectToDb():
 	connection = sqlite3.connect(DB_PATH)
-	connection.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
-	return connection.cursor()
+	# connection.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
+	return connection
 			
 def createTable(cursor):
 	createUsernameTableQuery = 'CREATE TABLE if not exists users ( \
@@ -28,9 +28,9 @@ def createTable(cursor):
 	
 
 def insertUser(cursor, user, password, type):
-	m = md5.new()
-	m.update(password)
-	password = str(m.digest())
+	# m = md5.new()
+	# m.update(password)
+	# password = str(m.digest())
 	
 	# insertUsersQuery = ' INSERT INTO users (username,password,type) VALUES("' + str(user) + '","' + str(password) + '","' + str(type) + '")'
 	insertUsersQuery = ' INSERT INTO users (username,password,type) VALUES(?,?,?)'
@@ -65,7 +65,10 @@ def populateUsers(cursor):
 	# cursor.executemany('INSERT INTO users (username,password,type) VALUES (?,?,?)', insertedUsers)
 	
 os.remove(DB_PATH)
-cursor = connectToDb()
+connection = connectToDb()
+cursor = connection.cursor()
 createTable(cursor)
 populateUsers(cursor)
+connection.commit()
 getAllFromTable(cursor, 'users')
+connection.commit()
