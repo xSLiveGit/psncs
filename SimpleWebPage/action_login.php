@@ -9,15 +9,15 @@ if (!empty( $_POST ))
         try 
         {
             // $con = new SQLiteDatabase('db.sqllite');
-            $con = new SQLite3('db.sqllite');
-            $encryptedPass = $_POST['password'];
+            $con = new SQLite3('hw.db');
 
             echo 'username: ' . $_POST['username'] . 'password: ' . $_POST['password'];
             
+            $passwd = hash("sha256", $_POST['password']);
             $stmt = $con->prepare('SELECT * FROM users WHERE username=:username AND password=:password'); 
 
             $stmt->bindParam(':username', $_POST['username']);
-            $stmt->bindParam(':password', $encryptedPass);
+            $stmt->bindParam(':password', $passwd);
 
             // $stmt = $con->prepare('SELECT * FROM users');
             $result = $stmt->execute();
@@ -38,11 +38,13 @@ if (!empty( $_POST ))
             {
                 echo('am un rezultat');
             	// Verify user password and set $_SESSION
+                echo 'given usertype: ' . $_POST['type'] . ' db usertype: ' . $user['type'];
             	if ((($user['type'] == 'admin') || ($_POST['type'] == 'normal'))) 
                 {
-            		$_SESSION['user_id'] = $user['id'];
+            		$_SESSION['username'] = $user['username'];
                     $_SESSION['type'] = $_POST['type'];
-                    header('page2.html');
+                    echo 'ar trebui sa fie login';
+                    header("Location: /page2.html");
             	}
                 else
                 {
