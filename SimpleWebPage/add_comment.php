@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 if(!empty($_POST) && isset($_POST['comment']) && isset($_SESSION['username']))
 {
@@ -12,7 +13,7 @@ if(!empty($_POST) && isset($_POST['comment']) && isset($_SESSION['username']))
 		$preparedStatement->bindParam(':username', $_SESSION['username']);
 
 		$preparedStatement->execute();
-		header("Location: /page2.html");
+		header("Location: /page2.php");
 	}
 	catch(Exception $exception)
 	{
