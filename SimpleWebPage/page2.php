@@ -17,6 +17,10 @@ require 'session_validation.php';
 </head>
 <body>
 
+<?php
+  echo( 'You have ' . $_SESSION['type'] . ' user privileges' );
+?>
+
 <form id="add_comment_form" action="add_comment.php " method='post'>
   <div class="container">
     <label for="cmt"><b>Comment: </b></label>
