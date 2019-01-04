@@ -1,5 +1,5 @@
 <?php
-session_start();
+require 'session_validation.php';
 
 if(!empty($_POST) && isset($_POST['comment']) && isset($_SESSION['username']))
 {

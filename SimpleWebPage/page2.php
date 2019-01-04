@@ -1,6 +1,7 @@
 <?php
-session_start();
+require 'session_validation.php';
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -24,19 +25,29 @@ session_start();
   </div>
 </form>
 
-<form id="ping_form" onsubmit="ping()">
+<form id="ping_form" onclick="ping()">
   <div class="container">
     <label for="ipl"><b>Ip: </b></label>
     <input type="text" placeholder="Enter target ip" name="ip" id="ip">
-    <button type="submit"> Ping </button>
+    <button type="button"> Ping </button>
   </div>
 </form>
+
+<form id="upload_form" onclick="uploadFile()">
+  <div class="container">
+    <label for="filePathL"><b>FilePath </b></label>
+    <input type="text" placeholder="Write valid path" name="filePath" id="filePath">
+    <button type="button"> Show </button>
+  </div>
+</form>
+
 
 <!-- <form onsubmit="ping()">
   IP Address: <input type="text" id="ip">
   <input type="submit">
 </form> -->
 
+<div id="file"></div>
 <div id="comments"></div>
 
 <script type="text/javascript">
@@ -48,14 +59,24 @@ session_start();
     );
   } 
 
+
+function uploadFile(){
+  var filePath = $("#filePath").val();
+  $.post("action_upload_file.php", { filePath : filePath }, function(data, status){
+          $("#file").html(data); 
+      }
+  );
+}
+
 function ping() {
     var ip = $("#ip").val();
     $.get("action_ping.php", { ip : ip }, function(data, status){
             console.log(data);
+            alert(data);
         }
     );
 }
- 
+  
 
 </script>
 

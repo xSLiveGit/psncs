@@ -1,5 +1,7 @@
 <?php
 
+require 'session_validation.php';
+
 function loadCommentsAsHtmlTableFormat()
 {
 	try

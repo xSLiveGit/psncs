@@ -1,5 +1,6 @@
 <?php
 
+require 'session_validation.php';
 
 if( !empty($_GET) && isset($_GET['ip']) ) 
 {

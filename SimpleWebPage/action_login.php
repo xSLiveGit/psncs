@@ -10,8 +10,6 @@ if (!empty( $_POST ))
         {
             // $con = new SQLiteDatabase('db.sqllite');
             $con = new SQLite3('hw.db');
-
-            echo 'username: ' . $_POST['username'] . 'password: ' . $_POST['password'];
             
             $passwd = hash("sha256", $_POST['password']);
             $stmt = $con->prepare('SELECT * FROM users WHERE username=:username AND password=:password'); 
@@ -19,36 +17,23 @@ if (!empty( $_POST ))
             $stmt->bindParam(':username', $_POST['username']);
             $stmt->bindParam(':password', $passwd);
 
-            // $stmt = $con->prepare('SELECT * FROM users');
             $result = $stmt->execute();
 
-            if($result)
-            {
-                echo("am rezultat");
-                echo ($result->numColumns());
-                // echo ($result->fetchArray());
-                // while($user = $result->fetchArray(1))
-                // {
-                //     echo($user['username']);
-                //     echo($user['password']);
-                //     echo($user['type']);
-                // }
-            }
             if ($user = $result->fetchArray(1))
             {
-                echo('am un rezultat');
-            	// Verify user password and set $_SESSION
-                echo 'given usertype: ' . $_POST['type'] . ' db usertype: ' . $user['type'];
             	if ((($user['type'] == 'admin') || ($_POST['type'] == 'normal'))) 
                 {
+                    $sessionEndTime = time() + 24 * 60 * 60;//24 hours
+
+                    $_SESSION['sessionEndTime'] = $sessionEndTime;
             		$_SESSION['username'] = $_POST['username'];
                     $_SESSION['type'] = $_POST['type'];
-                    echo 'ar trebui sa fie login';
+
                     header("Location: /page2.php");
             	}
                 else
                 {
-                    echo('aici invalid credential for given type');
+                    echo('invalid credential for given type');
                 }
             }
             else
@@ -58,7 +43,7 @@ if (!empty( $_POST ))
         }
         catch(Exception $Exception ) 
         {
-            echo($Exception->getMessage());
+            echo('Internal error');
         }
     }
 }
